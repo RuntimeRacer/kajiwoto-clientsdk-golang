@@ -20,5 +20,5 @@ const (
 	SDKVersion = "0.1.0"
 
 	KWGraphQLEndpoint   = "https://server.chiefhappiness.co/graphql"
-	KWWebSocketEndpoint = "https://server.chiefhappiness.co/graphql"
+	KWWebSocketEndpoint = "https://server.chiefhappiness.co/ws"
 )
