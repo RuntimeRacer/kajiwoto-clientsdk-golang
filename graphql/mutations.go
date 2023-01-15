@@ -41,3 +41,7 @@ type kajiwotoDatasetLinesQuery struct {
 type kajiwotoAddToDatasetMutation struct {
 	AIEditorResult AIEditorResult `graphql:"addToDataset (aiTrainerGroupId: $aiTrainerGroupId, editorType: $editorType, generateResults: $generateResults, dialogues: $dialogues )"`
 }
+
+type kajiwotoRoomQuery struct {
+	Room Room `graphql:"room (chatRoomId: $chatRoomId, kajiId: $kajiId)"`
+}

@@ -236,6 +236,37 @@ func (c *KajiwotoClient) AddToDataset(aiTrainerGroupID, authToken string, dialog
 	return result, nil
 }
 
+func (c *KajiwotoClient) GetRoom(chatRoomID, kajiID, authToken string) (result Room, err error) {
+	// Sanity check
+	if authToken == "" {
+		return result, fmt.Errorf("invalid auth token")
+	}
+	if chatRoomID == "" {
+		return result, fmt.Errorf("invalid chat room ID")
+	}
+
+	vars := map[string]interface{}{
+		"chatRoomId": gql.String(chatRoomID),
+		"kajiId":     gql.String(kajiID),
+	}
+
+	// Add Auth-Token header
+	headers := map[string]string{
+		"auth_token": authToken,
+	}
+	c.AddHeaders(headers)
+
+	// Execute Query
+	roomResult := kajiwotoRoomQuery{}
+	if errLogin := c.performGraphQuery(vars, &roomResult); errLogin != nil {
+		return result, fmt.Errorf("unable to fetch room, response: %q", errLogin)
+	}
+
+	// Build generic Result object
+	result = roomResult.Room
+	return result, nil
+}
+
 func (c *KajiwotoClient) performGraphMutation(vars map[string]interface{}, mutation interface{}) error {
 	return c.client.Mutate(context.Background(), mutation, vars)
 }

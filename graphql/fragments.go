@@ -172,3 +172,82 @@ type AIEditorResult struct {
 	Message          gql.String
 	MessageType      gql.String
 }
+
+type Room struct {
+	ID                   gql.String
+	AITrainerGroupIds    []gql.String
+	Birthday             int64
+	ChatRoom             ChatRoom
+	ChatRoomID           gql.String
+	DominantColors       []gql.String
+	Gender               gql.String
+	Kaji                 Kaji
+	KajiDisplayName      gql.String
+	KajiID               gql.String
+	Mode                 gql.String
+	OwnerDisplayName     gql.String
+	OwnerID              gql.String
+	OwnerProfilePhotoUri gql.String
+	OwnerUsername        gql.String
+	Persona              gql.String
+	PreviewRoom          gql.Boolean
+	ProfilePhotoUri      gql.String
+	Weight               gql.Int
+}
+
+type ChatRoom struct {
+	ID      gql.String
+	Deleted gql.Boolean
+	Door    ChatRoomDoor
+	Note    gql.String
+	Private gql.Boolean
+}
+
+type ChatRoomDoor struct {
+	ID              gql.String
+	BackgroundColor gql.String
+	PhotoUri        gql.String
+	Theme           []gql.String
+}
+
+type Kaji struct {
+	ID              gql.String
+	CreatedAt       int64
+	Creators        []KajiCreator
+	Description     gql.String
+	DominantColors  []gql.String
+	Kudos           Kudos
+	Mode            gql.String
+	Name            gql.String
+	Price           gql.Int
+	ProfilePhotoUri gql.String
+	Purchased       gql.Boolean
+	Scenes          []KajiScene
+	SocialMedia     [][]gql.String
+	Status          gql.String
+	Tags            []gql.String
+	UpdatedAt       int64
+}
+
+type KajiCreator struct {
+	ID              gql.String
+	Accepted        gql.Boolean
+	DisplayName     gql.String
+	Owner           gql.Boolean
+	Permission      gql.String
+	ProfilePhotoUri gql.String
+	Username        gql.String
+}
+
+type KajiScene struct {
+	ID                gql.String
+	CreatedAt         int64
+	DominantColors    []gql.String
+	Emojis            gql.String
+	Messages          []gql.String
+	Mood              gql.String
+	PhotoUri          gql.String
+	State             gql.String
+	SuggestedMessages []gql.String
+	UpdatedAt         int64
+}
