@@ -48,7 +48,7 @@ func (h *headerTransport) AddHeaders(newHeaders map[string]string) {
 	}
 }
 
-// KajiwotoClient is a custom graphql client for kajiwoto reqeusts
+// KajiwotoClient is a custom graphql client for kajiwoto reqeusts using the graphql API
 type KajiwotoClient struct {
 	client          *gql.Client
 	transportClient *http.Client
