@@ -345,26 +345,33 @@ type KajiwotoRPCChatActivityData struct {
 }
 
 type KajiwotoRPCChatActivity struct {
-	Action     string                              `json:"action"`
-	ChatRoomId string                              `json:"chatRoomId"`
-	EventType  *string                             `json:"eventType,omitempty"`
-	Message    *KajiwotoRPCChatActivitySubMessage  `json:"message,omitempty"`
-	Activity   *KajiwotoRPCChatActivitySubActivity `json:"activity,omitempty"`
-	PetData    *KajiwotoRPCChatActivityPetData     `json:"petData,omitempty"`
-	Channel    *KajiwotoRPCChatActivityChannel     `json:"channel,omitempty"`
-	SocketIds  []string                            `json:"socketIds,omitempty"`
+	Action      string                              `json:"action"`
+	ChatRoomId  string                              `json:"chatRoomId"`
+	EventType   *string                             `json:"eventType,omitempty"`
+	Message     *KajiwotoRPCChatActivitySubMessage  `json:"message,omitempty"`
+	Activity    *KajiwotoRPCChatActivitySubActivity `json:"activity,omitempty"`
+	PetData     *KajiwotoRPCChatActivityPetData     `json:"petData,omitempty"`
+	Channel     *KajiwotoRPCChatActivityChannel     `json:"channel,omitempty"`
+	Interaction *KajiwotoRPCChatActivityInteraction `json:"interaction,omitempty"`
+	SocketIds   []string                            `json:"socketIds,omitempty"`
+}
+
+type KajiwotoRPCChatActivityInteraction struct {
+	ShowScene bool   `json:"showScene"`
+	Type      string `json:"type"`
 }
 
 type KajiwotoRPCChatActivitySubMessage struct {
-	ClientId        string  `json:"clientId"`
+	ClientId        string  `json:"clientId,omitempty"`
 	ChatRoomId      string  `json:"chatRoomId"`
+	KajiwotoPetId   string  `json:"kajiwotoPetId,omitempty"`
 	Message         string  `json:"message"`
 	AttachmentUri   *string `json:"attachmentUri"`
 	Id              string  `json:"id"`
-	UserId          string  `json:"userId"`
-	UserName        string  `json:"username"`
-	DisplayName     string  `json:"displayName"`
-	ProfilePhotoUri *string `json:"profilePhotoUri"`
+	UserId          string  `json:"userId,omitempty"`
+	UserName        string  `json:"username,omitempty"`
+	DisplayName     string  `json:"displayName,omitempty"`
+	ProfilePhotoUri *string `json:"profilePhotoUri,omitempty"`
 	CreatedAt       uint64  `json:"createdAt"`
 }
 

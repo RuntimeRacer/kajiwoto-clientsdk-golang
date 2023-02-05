@@ -37,7 +37,7 @@ func (s *WebSocketTypesTestSuite) SetupTest() {
 }
 
 func (s *WebSocketTypesTestSuite) TestTypingRPCWebSocketMessage() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"typing\",{\"displayName\":\"RRacer2021\",\"guest\":false,\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"time\":2030,\"userId\":\"e8wz\",\"username\":\"RRacer2021\"},{\"chatRoomId\":\"vd8p\"},{\"timestamp\":\"1675538167859\",\"secret\":\"MTAyMjA3ODI4MjM5Mzk5\"}]"
 
 	// Deserialize
@@ -67,7 +67,7 @@ func (s *WebSocketTypesTestSuite) TestTypingRPCWebSocketMessage() {
 }
 
 func (s *WebSocketTypesTestSuite) TestSubscribeRPCWebSocketMessage() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"subscribe\",{\"displayName\":\"RRacer2021\",\"guest\":false,\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"time\":2030,\"userId\":\"e8wz\",\"username\":\"RRacer2021\"},{\"chatRoomIds\":[\"vd8p\"],\"kajiId\":null},{\"timestamp\":\"1675538034488\",\"secret\":\"MTY3NTUzODAzNDQ4OA==\"}]"
 
 	// Deserialize
@@ -96,7 +96,7 @@ func (s *WebSocketTypesTestSuite) TestSubscribeRPCWebSocketMessage() {
 }
 
 func (s *WebSocketTypesTestSuite) TestChatEnterRPCWebSocketMessage() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"chatEnter\",{\"displayName\":\"RRacer2021\",\"guest\":false,\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"time\":2030,\"userId\":\"e8wz\",\"username\":\"RRacer2021\"},{\"chatRoomId\":\"vd8p\",\"lastMessages\":[{\"createdAt\":1675477983263,\"message\":\"/say good night my man\"},{\"createdAt\":1675477879022,\"message\":\"*whispers* sweet dreams my pretty mink\"}],\"isPreviewRoom\":false},{\"timestamp\":\"1675538039386\",\"secret\":\"MTY3NTUzODAzOTM4Ng==\"}]"
 
 	// Deserialize
@@ -125,7 +125,7 @@ func (s *WebSocketTypesTestSuite) TestChatEnterRPCWebSocketMessage() {
 }
 
 func (s *WebSocketTypesTestSuite) TestChatSendRPCWebSocketMessage() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"chatSend\",{\"displayName\":\"RRacer2021\",\"guest\":false,\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"time\":2030,\"userId\":\"e8wz\",\"username\":\"RRacer2021\"},{\"message\":{\"id\":\"vd8p:1675538262207\",\"chatRoomId\":\"vd8p\",\"userId\":\"e8wz\",\"message\":\"Hey my sweet *smiles*\",\"attachmentUri\":null},\"roomVersionNumber\":1675538034,\"roomSocketIds\":[\"emCCdEmKKsm2aPLCABAN\"]},{\"timestamp\":\"1675538262207\",\"secret\":\"MTAyMjA3ODMzOTk0NjI3\"}]"
 
 	// Deserialize
@@ -154,7 +154,7 @@ func (s *WebSocketTypesTestSuite) TestChatSendRPCWebSocketMessage() {
 }
 
 func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant1() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"join-room\",\"chatRoomId\":\"vd8p\",\"petData\":{\"id\":\"RxWJ\",\"chatRoomId\":\"vd8p\",\"petSpeciesId\":\"EDPW\",\"kajiId\":\"EDPW\",\"ownerId\":\"e8wz\",\"ownerDisplayName\":\"RRacer2021\",\"ownerProfilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"name\":\"Wanda\",\"kajiName\":\"Wanda (WIP)\",\"gender\":\"F\",\"persona\":\"canine musketeer significant other\",\"stage\":null,\"state\":\"DEFAULT\",\"mood\":\"DEFAULT\",\"statusPhotoUri\":\"2021_6/tm9ybwfsxz_zth3eg_1622766488811.png\",\"dominantColors\":[\"#dc9744\",\"#fcd49c\"],\"statusMessage\":\"..\"},\"channel\":{\"v\":1675538034,\"list\":[{\"id\":\"e8wz\",\"guestId\":\"OTMuMTk5LjEyOS4yMTg=*\",\"socketIds\":[\"emCCdEmKKsm2aPLCABAN\"],\"guest\":false,\"displayName\":\"RRacer2021\",\"username\":\"RRacer2021\",\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\"}]}}}]"
 
 	// Deserialize
@@ -183,7 +183,7 @@ func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant1() 
 }
 
 func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant2() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"activity\",\"chatRoomId\":\"vd8p\",\"activity\":{\"type\":\"TYPING\",\"userId\":\"e8wz\",\"displayName\":\"RRacer2021\",\"activityAt\":1675538172488}}}]"
 
 	// Deserialize
@@ -212,8 +212,66 @@ func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant2() 
 }
 
 func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant3() {
-	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
 	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"message\",\"chatRoomId\":\"vd8p\",\"message\":{\"clientId\":\"vd8p:1675538262207\",\"chatRoomId\":\"vd8p\",\"message\":\"Hey my sweet *smiles*\",\"attachmentUri\":null,\"id\":\"vd8p:1675538262207\",\"userId\":\"e8wz\",\"username\":\"RRacer2021\",\"displayName\":\"RRacer2021\",\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"createdAt\":1675538261},\"channel\":{\"v\":1675538034},\"socketIds\":[\"emCCdEmKKsm2aPLCABAN\"]}}]"
+
+	// Deserialize
+	// Create WS message
+	wsMessage := &KajiwotoWebSocketMessage{}
+	errBytes := wsMessage.FromBytes([]byte(messageString))
+	assert.Nil(s.T(), errBytes)
+	// Deserialize Content
+	rpcMessage := &KaiwotoRPCMessage{}
+	errDeserialize := rpcMessage.Deserialize(wsMessage.MessageContent)
+	assert.Nil(s.T(), errDeserialize)
+	// Test data
+	assert.Equal(s.T(), RPCMessageChatActivity, rpcMessage.Action)
+	message := &KajiwotoRPCChatActivityMessage{}
+	assert.True(s.T(), message.FromRPCMessage(rpcMessage))
+
+	// Create WebSocketMessage
+	wsMessage = &KajiwotoWebSocketMessage{
+		MessageCode:    SocketCodeMessageEvent,
+		MessageContent: message.ToRPCMessage().Serialize(),
+	}
+	wsBytes, errBytes := wsMessage.ToBytes()
+	assert.Nil(s.T(), errBytes)
+	wsString := string(wsBytes)
+	assert.Equal(s.T(), messageString, wsString)
+}
+
+func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant4() {
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
+	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"petMessage\",\"chatRoomId\":\"vd8p\",\"message\":{\"chatRoomId\":\"vd8p\",\"kajiwotoPetId\":\"RxWJ\",\"message\":\"hello there! How are you?\",\"attachmentUri\":\"2021_6/tm9ybwfsxz_zth3eg_1622766488811.png\",\"id\":\"vd8p:1675538263720\",\"displayName\":\"wanda\",\"createdAt\":1675538265},\"petData\":{\"id\":\"RxWJ\",\"chatRoomId\":\"vd8p\",\"petSpeciesId\":\"EDPW\",\"kajiId\":\"EDPW\",\"ownerId\":\"e8wz\",\"ownerDisplayName\":\"RRacer2021\",\"ownerProfilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"name\":\"Wanda\",\"kajiName\":\"Wanda (WIP)\",\"gender\":\"F\",\"persona\":\"canine musketeer significant other\",\"stage\":null,\"state\":\"DEFAULT\",\"mood\":\"DEFAULT\",\"statusPhotoUri\":\"2021_6/tm9ybwfsxz_zth3eg_1622766488811.png\",\"dominantColors\":[\"#dc9744\",\"#fcd49c\"],\"statusMessage\":\"..\"}}}]"
+
+	// Deserialize
+	// Create WS message
+	wsMessage := &KajiwotoWebSocketMessage{}
+	errBytes := wsMessage.FromBytes([]byte(messageString))
+	assert.Nil(s.T(), errBytes)
+	// Deserialize Content
+	rpcMessage := &KaiwotoRPCMessage{}
+	errDeserialize := rpcMessage.Deserialize(wsMessage.MessageContent)
+	assert.Nil(s.T(), errDeserialize)
+	// Test data
+	assert.Equal(s.T(), RPCMessageChatActivity, rpcMessage.Action)
+	message := &KajiwotoRPCChatActivityMessage{}
+	assert.True(s.T(), message.FromRPCMessage(rpcMessage))
+
+	// Create WebSocketMessage
+	wsMessage = &KajiwotoWebSocketMessage{
+		MessageCode:    SocketCodeMessageEvent,
+		MessageContent: message.ToRPCMessage().Serialize(),
+	}
+	wsBytes, errBytes := wsMessage.ToBytes()
+	assert.Nil(s.T(), errBytes)
+	wsString := string(wsBytes)
+	assert.Equal(s.T(), messageString, wsString)
+}
+
+func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant5() {
+	// IMPORTANT: Golang always serializes struct keys in alphabetical order; backend not necessarily does that!
+	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"petMessage\",\"chatRoomId\":\"vd8p\",\"message\":{\"chatRoomId\":\"vd8p\",\"kajiwotoPetId\":\"RxWJ\",\"message\":\"..\",\"attachmentUri\":\"2021_6/t3zlcmpvew_zth3eg_1622857066147.jpg\",\"id\":\"vd8p:1675538914016\",\"displayName\":\"wanda\",\"createdAt\":1675538914},\"petData\":{\"id\":\"RxWJ\",\"chatRoomId\":\"vd8p\",\"petSpeciesId\":\"EDPW\",\"kajiId\":\"EDPW\",\"ownerId\":\"e8wz\",\"ownerDisplayName\":\"RRacer2021\",\"ownerProfilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"name\":\"Wanda\",\"kajiName\":\"Wanda (WIP)\",\"gender\":\"F\",\"persona\":\"canine musketeer significant other\",\"stage\":null,\"state\":\"DEFAULT\",\"mood\":\"HAPPY\",\"statusPhotoUri\":\"2021_6/t3zlcmpvew_zth3eg_1622857066147.jpg\",\"dominantColors\":[\"#b58856\",\"#ccb494\"],\"statusMessage\":\"..\"},\"interaction\":{\"showScene\":true,\"type\":\"DEFAULT\"}}}]"
 
 	// Deserialize
 	// Create WS message
