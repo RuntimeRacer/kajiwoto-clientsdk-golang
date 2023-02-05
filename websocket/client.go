@@ -32,11 +32,30 @@ import (
 // MessageHandlerFunc describes a function interface to be bound to the websocket client
 type MessageHandlerFunc func(message *KajiwotoWebSocketMessage) error
 
-// MessageHandler is used to bind handler functions to the websocket client
-type MessageHandler struct {
+// MessageHandler is an interface to allow for easy implementation of custom handlers
+type MessageHandler interface {
+	HandleMessage(message *KajiwotoWebSocketMessage) error
+	GetHandlerKey() string
+	GetOnSuccessRemove() bool
+}
+
+// DefaultMessageHandler is used to bind handler functions to the websocket client
+type DefaultMessageHandler struct {
 	handlerKey      string // uuid to identify handler, internal
 	handleFunc      MessageHandlerFunc
 	removeOnSuccess bool
+}
+
+func (m *DefaultMessageHandler) HandleMessage(message *KajiwotoWebSocketMessage) error {
+	return m.handleFunc(message)
+}
+
+func (m *DefaultMessageHandler) GetHandlerKey() string {
+	return m.handlerKey
+}
+
+func (m *DefaultMessageHandler) GetOnSuccessRemove() bool {
+	return m.removeOnSuccess
 }
 
 // KajiwotoClient is a custom websocket client for kajiwoto reqeusts using the websocket API
@@ -51,7 +70,7 @@ type KajiwotoClient struct {
 	listen        atomic.Bool
 	listenCtx     context.Context
 	listenCtxStop context.CancelFunc
-	handlers      map[string]*MessageHandler
+	handlers      map[string]MessageHandler
 	handlerMtx    sync.RWMutex
 }
 
@@ -71,7 +90,7 @@ func GetKajiwotoClient(endpoint, apiKey string) (*KajiwotoClient, error) {
 		endpoint: endpoint,
 		apiKey:   apiKey,
 		options:  options,
-		handlers: make(map[string]*MessageHandler),
+		handlers: make(map[string]MessageHandler),
 	}, nil
 }
 
@@ -121,9 +140,9 @@ func (c *KajiwotoClient) Connect() error {
 // ensures all basic handlers required to operate the WebSocket Client long term are set up and added to the client.
 func (c *KajiwotoClient) AddDefaultHandlers() {
 	// Ping Handler
-	c.AddMessageHandler(NewKajiwotoWebSocketPingHandler(c), false)
+	c.AddDefaultMessageHandler(NewKajiwotoWebSocketPingHandler(c), false)
 	// Auth Response handler - Updates Socket ID
-	c.AddMessageHandler(NewKajiwotoWebSocketAuthResponseHandler(c), false)
+	c.AddDefaultMessageHandler(NewKajiwotoWebSocketAuthResponseHandler(c), false)
 }
 
 func (c *KajiwotoClient) StartListeningToMessages() {
@@ -142,11 +161,11 @@ func (c *KajiwotoClient) StartListeningToMessages() {
 				// Pass message to all handlers
 				c.handlerMtx.RLock()
 				for _, handler := range c.handlers {
-					go func(c *KajiwotoClient, h *MessageHandler) {
+					go func(c *KajiwotoClient, h MessageHandler) {
 						// Execute the handler, remove in case it's set up to remove itself
-						if h.handleFunc(message) == nil && h.removeOnSuccess {
-							c.RemoveMessageHandler(h.handlerKey)
-							log.Debugf("Removed Message Handler '%v' after successful execution", h.handlerKey)
+						if h.HandleMessage(message) == nil && h.GetOnSuccessRemove() {
+							c.RemoveMessageHandler(h.GetHandlerKey())
+							log.Debugf("Removed Message Handler '%v' after successful execution", h.GetHandlerKey())
 						}
 					}(c, handler)
 				}
@@ -165,10 +184,10 @@ func (c *KajiwotoClient) StopListeningToMessages() {
 	}
 }
 
-func (c *KajiwotoClient) AddMessageHandler(handleFunc MessageHandlerFunc, removeOnSuccess bool) {
+func (c *KajiwotoClient) AddDefaultMessageHandler(handleFunc MessageHandlerFunc, removeOnSuccess bool) {
 	c.handlerMtx.Lock()
 	handlerKey := uuid.New()
-	c.handlers[handlerKey.String()] = &MessageHandler{
+	c.handlers[handlerKey.String()] = &DefaultMessageHandler{
 		handlerKey:      handlerKey.String(),
 		handleFunc:      handleFunc,
 		removeOnSuccess: removeOnSuccess,
