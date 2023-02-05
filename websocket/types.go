@@ -151,12 +151,12 @@ func (k *KaiwotoRPCMessage) DeserializeFromBytes(messageBytes []byte) ([]interfa
 	return rpcMessageParts, nil
 }
 
-func (k *KaiwotoRPCMessage) FetchDataFromPayload(output interface{}) bool {
+func (k *KaiwotoRPCMessage) FetchDataFromPayload(output interface{}, ignoreUnset bool) bool {
 	// Create a typesafe decoder
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Metadata:   nil,
 		Result:     output,
-		ErrorUnset: true,
+		ErrorUnset: !ignoreUnset,
 	})
 	if err != nil {
 		return false
@@ -191,13 +191,13 @@ func (k *KajiwotoRPCTypingMessage) FromRPCMessage(message *KaiwotoRPCMessage) bo
 	if message.Action != RPCMessageTyping {
 		return false
 	}
-	if fetch := message.FetchDataFromPayload(&k.UserData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.ChatRoomId); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.ChatRoomId, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.Secret); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
 		// do nothing
 	}
 	return true
@@ -223,13 +223,13 @@ func (k *KajiwotoRPCSubscribeMessage) FromRPCMessage(message *KaiwotoRPCMessage)
 	if message.Action != RPCMessageSubscribe {
 		return false
 	}
-	if fetch := message.FetchDataFromPayload(&k.UserData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.SubscribeArgs); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.SubscribeArgs, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.Secret); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
 		// do nothing
 	}
 	return true
@@ -255,13 +255,13 @@ func (k *KajiwotoRPCChatEnterMessage) FromRPCMessage(message *KaiwotoRPCMessage)
 	if message.Action != RPCMessageChatEnter {
 		return false
 	}
-	if fetch := message.FetchDataFromPayload(&k.UserData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.ChatroomData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.ChatroomData, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.Secret); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
 		// do nothing
 	}
 	return true
@@ -287,13 +287,13 @@ func (k *KajiwotoRPCChatSendMessage) FromRPCMessage(message *KaiwotoRPCMessage) 
 	if message.Action != RPCMessageChatSend {
 		return false
 	}
-	if fetch := message.FetchDataFromPayload(&k.UserData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.ChatSendData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.ChatSendData, false); !fetch {
 		// do nothing
 	}
-	if fetch := message.FetchDataFromPayload(&k.Secret); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
 		// do nothing
 	}
 	return true
@@ -315,7 +315,7 @@ func (k *KajiwotoRPCChatActivityMessage) FromRPCMessage(message *KaiwotoRPCMessa
 	if message.Action != RPCMessageChatActivity {
 		return false
 	}
-	if fetch := message.FetchDataFromPayload(&k.ActivityData); !fetch {
+	if fetch := message.FetchDataFromPayload(&k.ActivityData, true); !fetch {
 		// do nothing
 	}
 	return true
@@ -396,8 +396,8 @@ type KajiwotoRPCChatActivityPetData struct {
 }
 
 type KajiwotoRPCChatActivityChannel struct {
-	V    uint64                               `json:"v"`                              // Channel version
-	List []KajiwotoRPCChatActivityChannelUser `json:"list" mapstructure:",omitempty"` // Channel user list
+	V    uint64                               `json:"v"`              // Channel version
+	List []KajiwotoRPCChatActivityChannelUser `json:"list,omitempty"` // Channel user list
 }
 
 type KajiwotoRPCChatActivityChannelUser struct {

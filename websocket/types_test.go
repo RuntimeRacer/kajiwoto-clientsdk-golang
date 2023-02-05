@@ -213,7 +213,7 @@ func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant2() 
 
 func (s *WebSocketTypesTestSuite) TestChatActivityRPCWebSocketMessageVariant3() {
 	// IMPORTANT: Golang always serializes struct keys in ascending order; backend not necessarily does that!
-	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"message\",\"chatRoomId\":\"vd8p\",\"message\":{\"clientId\":\"vd8p:1675538262207\",\"chatRoomId\":\"vd8p\",\"message\":\"Hey my sweet *smiles*\",\"attachmentUri\":null,\"id\":\"vd8p:1675538262207\",\"userId\":\"e8wz\",\"username\":\"RRacer2021\",\"displayName\":\"RRacer2021\",\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"createdAt\":1675538261},\"channel\":{\"v\":1675538034,\"list\":null},\"socketIds\":[\"emCCdEmKKsm2aPLCABAN\"]}}]"
+	messageString := "42[\"chatActivity\",{\"data\":{\"action\":\"message\",\"chatRoomId\":\"vd8p\",\"message\":{\"clientId\":\"vd8p:1675538262207\",\"chatRoomId\":\"vd8p\",\"message\":\"Hey my sweet *smiles*\",\"attachmentUri\":null,\"id\":\"vd8p:1675538262207\",\"userId\":\"e8wz\",\"username\":\"RRacer2021\",\"displayName\":\"RRacer2021\",\"profilePhotoUri\":\"2021_6/mwe1ntk2mj_zth3eg_1624667330826.jpg\",\"createdAt\":1675538261},\"channel\":{\"v\":1675538034},\"socketIds\":[\"emCCdEmKKsm2aPLCABAN\"]}}]"
 
 	// Deserialize
 	// Create WS message
