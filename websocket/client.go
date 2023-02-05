@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // MessageHandlerFunc describes a function interface to be bound to the websocket client
@@ -166,8 +167,8 @@ func (c *KajiwotoClient) StopListeningToMessages() {
 }
 
 func (c *KajiwotoClient) AddMessageHandler(handleFunc MessageHandlerFunc, removeOnSuccess bool) {
-	c.handlerMtx.Lock()
 	handlerKey := uuid.New()
+	c.handlerMtx.Lock()
 	c.handlers[handlerKey.String()] = &MessageHandler{
 		handlerKey:      handlerKey.String(),
 		handleFunc:      handleFunc,
@@ -190,6 +191,7 @@ func (c *KajiwotoClient) SendMessage(message *KajiwotoWebSocketMessage) error {
 		return errMessage
 	}
 	// TODO: better context handling here
+	log.Debugf("Sending message: %v", string(bytes))
 	if errWrite := c.wsConn.Write(context.Background(), 1, bytes); errWrite != nil {
 		return errWrite
 	}
@@ -210,9 +212,23 @@ func (c *KajiwotoClient) ReadMessage(ctx context.Context) (*KajiwotoWebSocketMes
 	if strconv.Itoa(int(msgType)) != DataFrameText {
 		return nil, fmt.Errorf("server did not respond with text frame. Message was: (%v)[%v]", msgType, string(data))
 	}
+	log.Debugf("Received message: %v", string(data))
 	message := &KajiwotoWebSocketMessage{}
 	if errMessage := message.FromBytes(data); errMessage != nil {
 		return nil, errMessage
 	}
 	return message, nil
+}
+
+// BuildLocalUserTime is sent whenever the backend needs to know the current time at the location of the user
+func (c *KajiwotoClient) BuildLocalUserTime() int {
+	// Build Time
+	hours, minutes, _ := time.Now().Clock()
+	if minutes < 30 {
+		minutes = 0
+	} else {
+		minutes = 30
+	}
+	localUserTime := hours*100 + minutes
+	return localUserTime
 }

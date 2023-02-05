@@ -29,15 +29,18 @@ import (
 // NewKajiwotoWebSocketAuthResponseHandler is used to handle an auth message response
 func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoClient) MessageHandlerFunc {
 	return func(message *KajiwotoWebSocketMessage) error {
-		// Try to umarshall into required response
-		// If this won't work, message is not of expected type
-		response := &KaiwotoWebSocketAuthResponse{}
-		if errUnmarshall := json.Unmarshal(message.MessageContent.([]byte), response); errUnmarshall != nil {
-			return errUnmarshall
+		if message.MessageCode == SocketCodeMessageConnect {
+			// Try to umarshall into required response
+			// If this won't work, message is not of expected type
+			response := &KaiwotoWebSocketAuthResponse{}
+			if errUnmarshall := json.Unmarshal(message.MessageContent.([]byte), response); errUnmarshall != nil {
+				return errUnmarshall
+			}
+			c.socketID = response.Sid
+			log.Debugf("Assigned Socket ID: %v", c.socketID)
+			return nil
 		}
-		c.socketID = response.Sid
-		log.Debugf("Assigned Socket ID: %v", c.socketID)
-		return nil
+		return ErrUnableToHandleMessage
 	}
 }
 
@@ -53,7 +56,8 @@ func NewKajiwotoWebSocketPingHandler(c *KajiwotoClient) MessageHandlerFunc {
 			if errPong := c.SendMessage(pongResponse); errPong != nil {
 				return errPong
 			}
+			return nil
 		}
-		return nil
+		return ErrUnableToHandleMessage
 	}
 }

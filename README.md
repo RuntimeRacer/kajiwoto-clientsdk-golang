@@ -8,7 +8,17 @@ to connect to Kajiwoto's backend services for another project.
 
 This project contains:
 - A Kajiwoto GraphQL client, can be used for basic session functionality and backend interaction.
-- A Kajiwoto Websocket client, can be used for chatting with a kaji.
+- A Kajiwoto Websocket client, can be used for chatting with a kaji and trigger events in a chatroom.
+
+#### --- WIP Notice ---
+**This project is still in a very rough WIP state.**
+
+Some functionality might be missing, some parts of the implementation might lack documentation or proper structure.
+The author of this project aims towards providing a reliable and bug-free codebase.
+However, using the code in your own products happens at your own risk!
+
+If you encounter an issue, please create an Issue ticket via Github's issue tracker.
+#### --- WIP Notice ---
 
 ## USAGE
 This is no standalone software; it can be used to integrate Kajiwoto Features into your own products.

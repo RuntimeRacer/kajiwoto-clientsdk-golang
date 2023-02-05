@@ -18,6 +18,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mitchellh/mapstructure"
 	"regexp"
@@ -45,8 +46,13 @@ const (
 	// RPC Message Types
 	RPCMessageChatActivity = "chatActivity"
 	RPCMessageChatEnter    = "chatEnter"
+	RPCMessageChatLeave    = "chatLeave"
 	RPCMessageChatSend     = "chatSend"
+	RPCMessageChatSubmit   = "chatSubmit"
+	RPCMessageLiveSub      = "liveSub"
+	RPCMessageLogin        = "login"
 	RPCMessageSubscribe    = "subscribe"
+	RPCMessageUserStatus   = "userStatus"
 	RPCMessageTyping       = "typing"
 
 	// RPC Message Subtypes
@@ -54,6 +60,10 @@ const (
 	ChatActivityMessage     = "message"
 	ChatActivityPetMessage  = "petMessage"
 	ChatActivityJoinRoom    = "join-room"
+)
+
+var (
+	ErrUnableToHandleMessage = errors.New("unable to handle message")
 )
 
 // Basic WebSocket Message Handling types
@@ -104,19 +114,24 @@ type KaiwotoWebSocketAuthResponse struct {
 }
 
 // Basic RPC message handling types
-type KaiwotoRPCMessage struct {
+type KajiwotoRPCMessage interface {
+	ToRPCBaseMessage() *KaiwotoRPCBaseMessage
+	FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool
+}
+
+type KaiwotoRPCBaseMessage struct {
 	Action  string
 	Payload []interface{}
 }
 
-func (k *KaiwotoRPCMessage) Serialize() []interface{} {
+func (k *KaiwotoRPCBaseMessage) Serialize() []interface{} {
 	messageData := make([]interface{}, 0)
 	messageData = append(messageData, k.Action)
 	messageData = append(messageData, k.Payload...)
 	return messageData
 }
 
-func (k *KaiwotoRPCMessage) Deserialize(messageData interface{}) error {
+func (k *KaiwotoRPCBaseMessage) Deserialize(messageData interface{}) error {
 	var rpcMessageParts []interface{}
 	// check if already array
 	rpcMessageParts, okCastArray := messageData.([]interface{})
@@ -141,7 +156,7 @@ func (k *KaiwotoRPCMessage) Deserialize(messageData interface{}) error {
 	return nil
 }
 
-func (k *KaiwotoRPCMessage) DeserializeFromBytes(messageBytes []byte) ([]interface{}, error) {
+func (k *KaiwotoRPCBaseMessage) DeserializeFromBytes(messageBytes []byte) ([]interface{}, error) {
 	// Try to decode message content into Array
 	rpcMessageParts := make([]interface{}, 0)
 	errUnmarshal := json.Unmarshal(messageBytes, &rpcMessageParts)
@@ -151,7 +166,7 @@ func (k *KaiwotoRPCMessage) DeserializeFromBytes(messageBytes []byte) ([]interfa
 	return rpcMessageParts, nil
 }
 
-func (k *KaiwotoRPCMessage) FetchDataFromPayload(output interface{}, ignoreUnset bool) bool {
+func (k *KaiwotoRPCBaseMessage) FetchDataFromPayload(output interface{}, ignoreUnset bool) bool {
 	// Create a typesafe decoder
 	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 		Metadata:   nil,
@@ -177,8 +192,8 @@ type KajiwotoRPCTypingMessage struct {
 	Secret     KajiwotoRPCSecret
 }
 
-func (k *KajiwotoRPCTypingMessage) ToRPCMessage() *KaiwotoRPCMessage {
-	return &KaiwotoRPCMessage{
+func (k *KajiwotoRPCTypingMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
 		Action: RPCMessageTyping,
 		Payload: []interface{}{
 			k.UserData,
@@ -187,7 +202,7 @@ func (k *KajiwotoRPCTypingMessage) ToRPCMessage() *KaiwotoRPCMessage {
 		},
 	}
 }
-func (k *KajiwotoRPCTypingMessage) FromRPCMessage(message *KaiwotoRPCMessage) bool {
+func (k *KajiwotoRPCTypingMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
 	if message.Action != RPCMessageTyping {
 		return false
 	}
@@ -203,14 +218,46 @@ func (k *KajiwotoRPCTypingMessage) FromRPCMessage(message *KaiwotoRPCMessage) bo
 	return true
 }
 
+type KajiwotoRPCLoginMessage struct {
+	UserData   KajiwotoRPCUserData
+	UserStatus KajiwotoRPCUserStatus
+	Secret     KajiwotoRPCSecret
+}
+
+func (k *KajiwotoRPCLoginMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
+		Action: RPCMessageLogin,
+		Payload: []interface{}{
+			k.UserData,
+			k.UserStatus,
+			k.Secret,
+		},
+	}
+}
+func (k *KajiwotoRPCLoginMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
+	if message.Action != RPCMessageLogin {
+		return false
+	}
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.UserStatus, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
+		// do nothing
+	}
+	return true
+}
+
 type KajiwotoRPCSubscribeMessage struct {
 	UserData      KajiwotoRPCUserData
 	SubscribeArgs KajiwotoRPCSubscribeArgs
 	Secret        KajiwotoRPCSecret
 }
 
-func (k *KajiwotoRPCSubscribeMessage) ToRPCMessage() *KaiwotoRPCMessage {
-	return &KaiwotoRPCMessage{
+func (k *KajiwotoRPCSubscribeMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
 		Action: RPCMessageSubscribe,
 		Payload: []interface{}{
 			k.UserData,
@@ -219,7 +266,7 @@ func (k *KajiwotoRPCSubscribeMessage) ToRPCMessage() *KaiwotoRPCMessage {
 		},
 	}
 }
-func (k *KajiwotoRPCSubscribeMessage) FromRPCMessage(message *KaiwotoRPCMessage) bool {
+func (k *KajiwotoRPCSubscribeMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
 	if message.Action != RPCMessageSubscribe {
 		return false
 	}
@@ -241,8 +288,8 @@ type KajiwotoRPCChatEnterMessage struct {
 	Secret       KajiwotoRPCSecret
 }
 
-func (k *KajiwotoRPCChatEnterMessage) ToRPCMessage() *KaiwotoRPCMessage {
-	return &KaiwotoRPCMessage{
+func (k *KajiwotoRPCChatEnterMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
 		Action: RPCMessageChatEnter,
 		Payload: []interface{}{
 			k.UserData,
@@ -251,7 +298,7 @@ func (k *KajiwotoRPCChatEnterMessage) ToRPCMessage() *KaiwotoRPCMessage {
 		},
 	}
 }
-func (k *KajiwotoRPCChatEnterMessage) FromRPCMessage(message *KaiwotoRPCMessage) bool {
+func (k *KajiwotoRPCChatEnterMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
 	if message.Action != RPCMessageChatEnter {
 		return false
 	}
@@ -273,8 +320,8 @@ type KajiwotoRPCChatSendMessage struct {
 	Secret       KajiwotoRPCSecret
 }
 
-func (k *KajiwotoRPCChatSendMessage) ToRPCMessage() *KaiwotoRPCMessage {
-	return &KaiwotoRPCMessage{
+func (k *KajiwotoRPCChatSendMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
 		Action: RPCMessageChatSend,
 		Payload: []interface{}{
 			k.UserData,
@@ -283,7 +330,7 @@ func (k *KajiwotoRPCChatSendMessage) ToRPCMessage() *KaiwotoRPCMessage {
 		},
 	}
 }
-func (k *KajiwotoRPCChatSendMessage) FromRPCMessage(message *KaiwotoRPCMessage) bool {
+func (k *KajiwotoRPCChatSendMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
 	if message.Action != RPCMessageChatSend {
 		return false
 	}
@@ -299,23 +346,173 @@ func (k *KajiwotoRPCChatSendMessage) FromRPCMessage(message *KaiwotoRPCMessage) 
 	return true
 }
 
+type KajiwotoRPCChatSubmitMessage struct {
+	UserData       KajiwotoRPCUserData
+	ChatSubmitData KajiwotoRPCChatSubmitData
+	Secret         KajiwotoRPCSecret
+}
+
+func (k *KajiwotoRPCChatSubmitMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
+		Action: RPCMessageChatSubmit,
+		Payload: []interface{}{
+			k.UserData,
+			k.ChatSubmitData,
+			k.Secret,
+		},
+	}
+}
+func (k *KajiwotoRPCChatSubmitMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
+	if message.Action != RPCMessageChatSubmit {
+		return false
+	}
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.ChatSubmitData, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
+		// do nothing
+	}
+	return true
+}
+
+type KajiwotoRPCChatLeaveMessage struct {
+	Field1   KajiwotoRPCEmptyObject
+	ChatRoom KajiwotoRPCChatRoomId
+	Secret   KajiwotoRPCSecret
+}
+
+func (k *KajiwotoRPCChatLeaveMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
+		Action: RPCMessageChatLeave,
+		Payload: []interface{}{
+			k.Field1,
+			k.ChatRoom,
+			k.Secret,
+		},
+	}
+}
+func (k *KajiwotoRPCChatLeaveMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
+	if message.Action != RPCMessageChatLeave {
+		return false
+	}
+	if fetch := message.FetchDataFromPayload(&k.Field1, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.ChatRoom, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
+		// do nothing
+	}
+	return true
+}
+
 type KajiwotoRPCChatActivityMessage struct {
 	ActivityData KajiwotoRPCChatActivityData
 }
 
-func (k *KajiwotoRPCChatActivityMessage) ToRPCMessage() *KaiwotoRPCMessage {
-	return &KaiwotoRPCMessage{
+func (k *KajiwotoRPCChatActivityMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
 		Action: RPCMessageChatActivity,
 		Payload: []interface{}{
 			k.ActivityData,
 		},
 	}
 }
-func (k *KajiwotoRPCChatActivityMessage) FromRPCMessage(message *KaiwotoRPCMessage) bool {
+func (k *KajiwotoRPCChatActivityMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
 	if message.Action != RPCMessageChatActivity {
 		return false
 	}
 	if fetch := message.FetchDataFromPayload(&k.ActivityData, true); !fetch {
+		// do nothing
+	}
+	return true
+}
+
+type KajiwotoRPCUserStatusClientMessage struct {
+	UserData   KajiwotoRPCUserData
+	UserStatus KajiwotoRPCUserStatus
+	Secret     KajiwotoRPCSecret
+}
+
+func (k *KajiwotoRPCUserStatusClientMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
+		Action: RPCMessageUserStatus,
+		Payload: []interface{}{
+			k.UserData,
+			k.UserStatus,
+			k.Secret,
+		},
+	}
+}
+func (k *KajiwotoRPCUserStatusClientMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
+	if message.Action != RPCMessageUserStatus {
+		return false
+	}
+	if fetch := message.FetchDataFromPayload(&k.UserData, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.UserStatus, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
+		// do nothing
+	}
+	return true
+}
+
+type KajiwotoRPCUserStatusServerMessage struct {
+	StatusData KajiwotoRPCUserStatusData
+}
+
+func (k *KajiwotoRPCUserStatusServerMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
+		Action: RPCMessageUserStatus,
+		Payload: []interface{}{
+			k.StatusData,
+		},
+	}
+}
+func (k *KajiwotoRPCUserStatusServerMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
+	if message.Action != RPCMessageUserStatus {
+		return false
+	}
+	if fetch := message.FetchDataFromPayload(&k.StatusData, true); !fetch {
+		// do nothing
+	}
+	return true
+}
+
+type KajiwotoRPCLiveSubMessage struct {
+	Field1 KajiwotoRPCEmptyObject // No idea what these do yet, but they're always empty on initial call
+	Field2 KajiwotoRPCEmptyObject // No idea what these do yet, but they're always empty on initial call
+	Secret KajiwotoRPCSecret
+}
+
+func (k *KajiwotoRPCLiveSubMessage) ToRPCBaseMessage() *KaiwotoRPCBaseMessage {
+	return &KaiwotoRPCBaseMessage{
+		Action: RPCMessageLiveSub,
+		Payload: []interface{}{
+			k.Field1,
+			k.Field2,
+			k.Secret,
+		},
+	}
+}
+func (k *KajiwotoRPCLiveSubMessage) FromRPCBaseMessage(message *KaiwotoRPCBaseMessage) bool {
+	if message.Action != RPCMessageLiveSub {
+		return false
+	}
+	if fetch := message.FetchDataFromPayload(&k.Field1, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.Field2, false); !fetch {
+		// do nothing
+	}
+	if fetch := message.FetchDataFromPayload(&k.Secret, false); !fetch {
 		// do nothing
 	}
 	return true
@@ -331,13 +528,26 @@ type KajiwotoRPCUserData struct {
 	Username        string  `json:"username"`
 }
 
+type KajiwotoRPCStatusUserData struct {
+	DisplayName     string  `json:"displayName"`
+	Guest           bool    `json:"guest"`
+	ProfilePhotoUri *string `json:"profilePhotoUri"`
+	UserID          string  `json:"userId"`
+	Username        string  `json:"username"`
+	Status          string  `json:"status"`
+}
+
 type KajiwotoRPCUserStatus struct {
-	FriendIDs []string `json:"friendIds"`
+	FriendIDs []string `json:"friendIds,omitempty"`
 	Status    string   `json:"status"`
 }
 
 type KajiwotoRPCChatRoomId struct {
 	ChatRoomId string `json:"chatRoomId"`
+}
+
+type KajiwotoRPCUserStatusData struct {
+	Data KajiwotoRPCStatusUserData `json:"data"`
 }
 
 type KajiwotoRPCChatActivityData struct {
@@ -421,6 +631,21 @@ type KajiwotoRPCChatRoomData struct {
 	ChatRoomId    string                   `json:"chatRoomId"`
 	LastMessages  []KajiwotoRPCChatMessage `json:"lastMessages"`
 	IsPreviewRoom bool                     `json:"isPreviewRoom"`
+}
+
+type KajiwotoRPCChatSubmitData struct {
+	ChatRoomId   string                        `json:"chatRoomId"`
+	Messages     []string                      `json:"messages"`
+	Role         KajiwotoRPCChatSubmitDataRole `json:"role"`
+	Emoji        *string                       `json:"emoji"`
+	EmojiSceneId *string                       `json:"emojiSceneId"`
+	Platform     string                        `json:"platform"`
+}
+
+type KajiwotoRPCChatSubmitDataRole struct {
+}
+
+type KajiwotoRPCEmptyObject struct {
 }
 
 type KajiwotoRPCChatMessage struct {
