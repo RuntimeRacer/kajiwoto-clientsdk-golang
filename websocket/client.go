@@ -131,6 +131,7 @@ func (c *KajiwotoClient) StartListeningToMessages() {
 	if c.listen.CompareAndSwap(false, true) {
 		c.listenCtx, c.listenCtxStop = context.WithCancel(context.Background())
 		go func(c *KajiwotoClient) {
+			log.Debugf("Listening to incoming messages...")
 			for c.listen.Load() {
 				message, errRead := c.ReadMessage(c.listenCtx)
 				if errRead != nil {
@@ -151,6 +152,7 @@ func (c *KajiwotoClient) StartListeningToMessages() {
 				}
 				c.handlerMtx.RUnlock()
 			}
+			log.Debugf("Stopped listening to incoming messages.")
 		}(c)
 	}
 }

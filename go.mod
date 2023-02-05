@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/google/go-cmp v0.5.5
 	github.com/google/uuid v1.1.2
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/runtimeracer/go-graphql-client v0.2.4
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.7.0
