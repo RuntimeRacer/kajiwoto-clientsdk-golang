@@ -45,3 +45,7 @@ type kajiwotoAddToDatasetMutation struct {
 type kajiwotoRoomQuery struct {
 	Room Room `graphql:"room (chatRoomId: $chatRoomId, kajiId: $kajiId)"`
 }
+
+type kajiwotoRoomHistoryQuery struct {
+	RoomHistory RoomHistory `graphql:"roomHistory (chatRoomId: $chatRoomId, kajiId: $kajiId)"`
+}

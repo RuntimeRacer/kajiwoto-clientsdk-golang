@@ -40,8 +40,8 @@ type MessageHandler struct {
 	removeOnSuccess bool
 }
 
-// KajiwotoClient is a custom websocket client for kajiwoto reqeusts using the websocket API
-type KajiwotoClient struct {
+// KajiwotoWebSocketClient is a custom websocket client for kajiwoto reqeusts using the websocket API
+type KajiwotoWebSocketClient struct {
 	// Params
 	endpoint string
 	apiKey   string
@@ -56,27 +56,17 @@ type KajiwotoClient struct {
 	handlerMtx    sync.RWMutex
 }
 
-func GetKajiwotoClient(endpoint, apiKey string) (*KajiwotoClient, error) {
-	// Init Websocket Client Config
-	//origin := "http://localhost/"
-	options := &websocket.DialOptions{}
-
-	// Set Handshake Headers
-
-	//if errMarshal != nil {
-	//	return nil, errMarshal
-	//}
-	//config.Header.Add("auth", string(authHeader))
-
-	return &KajiwotoClient{
+func GetKajiwotoWebSocketClient(endpoint, apiKey string) *KajiwotoWebSocketClient {
+	// Init WebSocket Client
+	return &KajiwotoWebSocketClient{
 		endpoint: endpoint,
 		apiKey:   apiKey,
-		options:  options,
+		options:  &websocket.DialOptions{},
 		handlers: make(map[string]*MessageHandler),
-	}, nil
+	}
 }
 
-func (c *KajiwotoClient) Connect() error {
+func (c *KajiwotoWebSocketClient) Connect() error {
 	if c.wsConn != nil {
 		return errors.New("client is already connected")
 	}
@@ -120,18 +110,18 @@ func (c *KajiwotoClient) Connect() error {
 
 // AddDefaultHandlers
 // ensures all basic handlers required to operate the WebSocket Client long term are set up and added to the client.
-func (c *KajiwotoClient) AddDefaultHandlers() {
+func (c *KajiwotoWebSocketClient) AddDefaultHandlers() {
 	// Ping Handler
 	c.AddMessageHandler(NewKajiwotoWebSocketPingHandler(c), false)
 	// Auth Response handler - Updates Socket ID
 	c.AddMessageHandler(NewKajiwotoWebSocketAuthResponseHandler(c), false)
 }
 
-func (c *KajiwotoClient) StartListeningToMessages() {
+func (c *KajiwotoWebSocketClient) StartListeningToMessages() {
 	// Start goroutine to handle incoming messages if it's not active
 	if c.listen.CompareAndSwap(false, true) {
 		c.listenCtx, c.listenCtxStop = context.WithCancel(context.Background())
-		go func(c *KajiwotoClient) {
+		go func(c *KajiwotoWebSocketClient) {
 			log.Debugf("Listening to incoming messages...")
 			for c.listen.Load() {
 				message, errRead := c.ReadMessage(c.listenCtx)
@@ -143,7 +133,7 @@ func (c *KajiwotoClient) StartListeningToMessages() {
 				// Pass message to all handlers
 				c.handlerMtx.RLock()
 				for _, handler := range c.handlers {
-					go func(c *KajiwotoClient, h *MessageHandler) {
+					go func(c *KajiwotoWebSocketClient, h *MessageHandler) {
 						// Execute the handler, remove in case it's set up to remove itself
 						if h.handleFunc(message) == nil && h.removeOnSuccess {
 							c.RemoveMessageHandler(h.handlerKey)
@@ -158,7 +148,7 @@ func (c *KajiwotoClient) StartListeningToMessages() {
 	}
 }
 
-func (c *KajiwotoClient) StopListeningToMessages() {
+func (c *KajiwotoWebSocketClient) StopListeningToMessages() {
 	if c.listen.CompareAndSwap(true, false) {
 		// Finish listen context and unset it
 		c.listenCtxStop()
@@ -166,26 +156,27 @@ func (c *KajiwotoClient) StopListeningToMessages() {
 	}
 }
 
-func (c *KajiwotoClient) AddMessageHandler(handleFunc MessageHandlerFunc, removeOnSuccess bool) {
-	handlerKey := uuid.New()
+func (c *KajiwotoWebSocketClient) AddMessageHandler(handleFunc MessageHandlerFunc, removeOnSuccess bool) (handlerKey string) {
+	handlerKey = uuid.New().String()
 	c.handlerMtx.Lock()
-	c.handlers[handlerKey.String()] = &MessageHandler{
-		handlerKey:      handlerKey.String(),
+	c.handlers[handlerKey] = &MessageHandler{
+		handlerKey:      handlerKey,
 		handleFunc:      handleFunc,
 		removeOnSuccess: removeOnSuccess,
 	}
 	c.handlerMtx.Unlock()
 	log.Debugf("Added Message Handler '%v'. Autoremove: %v", handlerKey, removeOnSuccess)
+	return handlerKey
 }
 
-func (c *KajiwotoClient) RemoveMessageHandler(handlerKey string) {
+func (c *KajiwotoWebSocketClient) RemoveMessageHandler(handlerKey string) {
 	c.handlerMtx.Lock()
 	delete(c.handlers, handlerKey)
 	c.handlerMtx.Unlock()
 	log.Debugf("Removed Message Handler '%v'", handlerKey)
 }
 
-func (c *KajiwotoClient) SendMessage(message *KajiwotoWebSocketMessage) error {
+func (c *KajiwotoWebSocketClient) SendMessage(message *KajiwotoWebSocketMessage) error {
 	bytes, errMessage := message.ToBytes()
 	if errMessage != nil {
 		return errMessage
@@ -198,7 +189,7 @@ func (c *KajiwotoClient) SendMessage(message *KajiwotoWebSocketMessage) error {
 	return nil
 }
 
-func (c *KajiwotoClient) ReadMessage(ctx context.Context) (*KajiwotoWebSocketMessage, error) {
+func (c *KajiwotoWebSocketClient) ReadMessage(ctx context.Context) (*KajiwotoWebSocketMessage, error) {
 	// Ensure this is only called once
 	if c.listenCtx != nil && c.listenCtx != ctx {
 		return nil, fmt.Errorf("client is already listening for new messages. Stop listening to manually handle reads")
@@ -221,7 +212,7 @@ func (c *KajiwotoClient) ReadMessage(ctx context.Context) (*KajiwotoWebSocketMes
 }
 
 // BuildLocalUserTime is sent whenever the backend needs to know the current time at the location of the user
-func (c *KajiwotoClient) BuildLocalUserTime() int {
+func (c *KajiwotoWebSocketClient) BuildLocalUserTime() int {
 	// Build Time
 	hours, minutes, _ := time.Now().Clock()
 	if minutes < 30 {

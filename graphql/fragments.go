@@ -195,6 +195,30 @@ type Room struct {
 	Weight               gql.Int
 }
 
+type RoomHistory struct {
+	ID         gql.String
+	ChatRoomID gql.String
+	KajiID     gql.String
+	Messages   []ChatMessage
+}
+
+type ChatMessage struct {
+	ID              gql.String
+	AttachmentUri   gql.String
+	ClientID        gql.String
+	ChatRoomID      gql.String
+	CreatedAt       int64
+	DisplayName     gql.String
+	InteractionType gql.String
+	KajiwotoPetId   gql.String
+	Message         gql.String
+	ProfilePhotoUri gql.String
+	ShowScene       gql.Boolean
+	UpdatedAt       int64
+	UserID          gql.String
+	Username        gql.String
+}
+
 type ChatRoom struct {
 	ID      gql.String
 	Deleted gql.Boolean

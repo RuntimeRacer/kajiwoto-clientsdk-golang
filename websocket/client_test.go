@@ -43,8 +43,7 @@ func (s *WebSocketClientTestSuite) SetupTest() {
 func (s *WebSocketClientTestSuite) TestWebSocketLoginWrongAPIKey() {
 	// Init client wrong key
 	brokenKey := os.Getenv("WEBSOCKET_CLIENT_KEY")[1:4]
-	client, errClient := GetKajiwotoClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", brokenKey)
-	assert.Nil(s.T(), errClient)
+	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", brokenKey)
 	// Connect to Websocket Server
 	errConnect := client.Connect()
 	assert.Nil(s.T(), errConnect)
@@ -55,8 +54,7 @@ func (s *WebSocketClientTestSuite) TestWebSocketLoginWrongAPIKey() {
 
 func (s *WebSocketClientTestSuite) TestWebSocketLoginCorrectAPIKey() {
 	// Init client correct key
-	client, errClient := GetKajiwotoClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
-	assert.Nil(s.T(), errClient)
+	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
 	// Connect to Websocket Server
 	errConnect := client.Connect()
 	assert.Nil(s.T(), errConnect)
@@ -66,8 +64,7 @@ func (s *WebSocketClientTestSuite) TestWebSocketLoginCorrectAPIKey() {
 
 func (s *WebSocketClientTestSuite) TestWebSocketStopListening() {
 	// Init client wrong key
-	client, errClient := GetKajiwotoClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
-	assert.Nil(s.T(), errClient)
+	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
 	// Connect to Websocket Server
 	errConnect := client.Connect()
 	assert.Nil(s.T(), errConnect)
@@ -118,124 +115,181 @@ func (s *WebSocketClientTestSuite) helperChatActivityChannelWithHandler() (chan 
 	return chatActivityChannel, handleFunc
 }
 
-func (s *WebSocketClientTestSuite) TestWebSocketSubscribeToRoom() {
+func (s *WebSocketClientTestSuite) helperUserStatusChannelWithHandler() (chan *KajiwotoRPCUserStatusServerMessage, MessageHandlerFunc) {
+	userStatusChannel := make(chan *KajiwotoRPCUserStatusServerMessage, 1)
+	handleFunc := func(message *KajiwotoWebSocketMessage) error {
+		if message.MessageCode == SocketCodeMessageEvent {
+			// Deserialize Content
+			rpcMessage := &KaiwotoRPCBaseMessage{}
+			errDeserialize := rpcMessage.Deserialize(message.MessageContent)
+			assert.Nil(s.T(), errDeserialize)
+
+			// Handle Activity Message
+			if rpcMessage.Action == RPCMessageUserStatus {
+				statusMessage := &KajiwotoRPCUserStatusServerMessage{}
+				assert.True(s.T(), statusMessage.FromRPCBaseMessage(rpcMessage))
+				userStatusChannel <- statusMessage
+			}
+
+			return nil
+		}
+		return ErrUnableToHandleMessage
+	}
+	return userStatusChannel, handleFunc
+}
+
+func (s *WebSocketClientTestSuite) helperBuildDefaultRequestData(client *KajiwotoWebSocketClient) (userData KajiwotoRPCUserData) {
+	// UserData
+	photoUri := os.Getenv("WEBSOCKET_USER_PHOTO_URI")
+	userData = KajiwotoRPCUserData{
+		Guest:           false,
+		UserID:          os.Getenv("WEBSOCKET_USER_ID"),
+		DisplayName:     os.Getenv("WEBSOCKET_USER_DISPLAYNAME"),
+		Username:        os.Getenv("WEBSOCKET_USER_USERNAME"),
+		ProfilePhotoUri: &photoUri,
+		Time:            client.BuildLocalUserTime(),
+	}
+	return userData
+}
+
+func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 	// Init client correct key
-	client, errClient := GetKajiwotoClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
-	assert.Nil(s.T(), errClient)
+	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
 
 	// Define channels used to wait for responses
-	closeChannel := make(chan bool, 1)
+	finishTestChannel := make(chan bool, 1)
 	authChannel, authHandler := s.helperAuthChannelWithHandler()
 	chatActivityChannel, chatActivityHandler := s.helperChatActivityChannelWithHandler()
+	userStatusChannel, userStatusHandler := s.helperUserStatusChannelWithHandler()
 
 	// Add Handlers
-	client.AddMessageHandler(authHandler, true)
-	client.AddMessageHandler(chatActivityHandler, true)
+	_ = client.AddMessageHandler(authHandler, true)
+	chatActivityHandlerKey := client.AddMessageHandler(chatActivityHandler, false)
+	userStatusHandlerKey := client.AddMessageHandler(userStatusHandler, false)
 
 	// Connect to Websocket Server
 	errConnect := client.Connect()
 	assert.Nil(s.T(), errConnect)
 
-	// Handle all events
-	// Wait until timeout or target message received
+	// Build comman data required for handling
+	userData := s.helperBuildDefaultRequestData(client)
+
+	// Wait until timeout or all target messages received
 	waitTimeout := time.NewTimer(time.Second * 5)
 	done := false
+
+	// Handle all events
 	for !done {
 		select {
 		case socketId := <-authChannel:
 			assert.NotEmpty(s.T(), socketId)
 
-			// Build User Data
-			photoUri := os.Getenv("WEBSOCKET_USER_PHOTO_URI")
-			userData := KajiwotoRPCUserData{
-				Guest:           false,
-				UserID:          os.Getenv("WEBSOCKET_USER_ID"),
-				DisplayName:     os.Getenv("WEBSOCKET_USER_DISPLAYNAME"),
-				Username:        os.Getenv("WEBSOCKET_USER_USERNAME"),
-				ProfilePhotoUri: &photoUri,
-				Time:            client.BuildLocalUserTime(),
-			}
-
 			// Create Login message & send it
-			//loginMessage := &KajiwotoRPCLoginMessage{
-			//	UserData: userData,
-			//	UserStatus: KajiwotoRPCUserStatus{
-			//		Status: "ONLINE",
-			//	},
-			//	Secret: client.createSecret(),
-			//}
-			//wsMessage := &KajiwotoWebSocketMessage{
-			//	MessageCode:    SocketCodeMessageEvent,
-			//	MessageContent: loginMessage.ToRPCBaseMessage().Serialize(),
-			//}
-			//errSend := client.SendMessage(wsMessage)
-			//assert.Nil(s.T(), errSend)
-			//time.Sleep(time.Millisecond * 500)
-
-			//// Create User Status message & send it
-			//statusMessage := &KajiwotoRPCUserStatusClientMessage{
-			//	UserData: userData,
-			//	UserStatus: KajiwotoRPCUserStatus{
-			//		Status: "ONLINE",
-			//	},
-			//	Secret: client.createSecret(),
-			//}
-			//wsMessage = &KajiwotoWebSocketMessage{
-			//	MessageCode:    SocketCodeMessageEvent,
-			//	MessageContent: statusMessage.ToRPCBaseMessage().Serialize(),
-			//}
-			//errSend = client.SendMessage(wsMessage)
-			//assert.Nil(s.T(), errSend)
-			//time.Sleep(time.Millisecond * 100)
-
-			// Create Live Sub message & send it
-			//liveSubMessage := &KajiwotoRPCLiveSubMessage{
-			//	Secret: client.createSecret(),
-			//}
-			//wsMessage := &KajiwotoWebSocketMessage{
-			//	MessageCode:    SocketCodeMessageEvent,
-			//	MessageContent: liveSubMessage.ToRPCBaseMessage().Serialize(),
-			//}
-			//errSend := client.SendMessage(wsMessage)
-			//assert.Nil(s.T(), errSend)
-			//time.Sleep(time.Millisecond * 100)
-
-			// Create suscribe message & send it
-			subscribeMessage := &KajiwotoRPCSubscribeMessage{
+			loginMessage := &KajiwotoRPCLoginMessage{
 				UserData: userData,
-				SubscribeArgs: KajiwotoRPCSubscribeArgs{
-					ChatRoomIds: []string{os.Getenv("WEBSOCKET_CHATROOM_ID")},
+				UserStatus: KajiwotoRPCUserStatus{
+					Status: "ONLINE",
 				},
 				Secret: createMessageSecret(),
 			}
-			wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
+			wsMessage := CreateKajiwotoWebSocketEventMessage(loginMessage)
 			errSend := client.SendMessage(wsMessage)
 			assert.Nil(s.T(), errSend)
-		case activityUpdate := <-chatActivityChannel:
-			assert.NotNil(s.T(), activityUpdate)
-			// TODO: Some more checks on the result
-			// Shutdown
-			closeChannel <- true
+
+		case userStatusUpdate := <-userStatusChannel:
+			assert.NotNil(s.T(), userStatusUpdate)
+
+			// Check if OK and then trigger subscribe Message
+			equalUser := userStatusUpdate.StatusData.Data.UserID == userData.UserID
+			userOnline := userStatusUpdate.StatusData.Data.Status == "ONLINE"
+			assert.True(s.T(), equalUser)
+			assert.True(s.T(), userOnline)
+
+			if !equalUser || !userOnline {
+				finishTestChannel <- true
+			} else {
+				// Send subscribe Message
+				subscribeMessage := &KajiwotoRPCSubscribeMessage{
+					UserData: userData,
+					SubscribeArgs: KajiwotoRPCSubscribeArgs{
+						ChatRoomIds: []string{os.Getenv("WEBSOCKET_CHATROOM_ID")},
+					},
+					Secret: createMessageSecret(),
+				}
+				wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
+				errSend := client.SendMessage(wsMessage)
+				assert.Nil(s.T(), errSend)
+			}
+
+		case chatActivityUpdate := <-chatActivityChannel:
+			assert.NotNil(s.T(), chatActivityUpdate)
+
+			// Handle according to subtype
+			switch chatActivityUpdate.ActivityData.Data.Action {
+			case ChatActivityJoinRoom: // <- First Message to be received; after subscribe
+				equalChatRoom := chatActivityUpdate.ActivityData.Data.ChatRoomId == os.Getenv("WEBSOCKET_CHATROOM_ID")
+				assert.True(s.T(), equalChatRoom)
+				if !equalChatRoom {
+					finishTestChannel <- true
+				} else {
+					// Send enter Chat Message
+					subscribeMessage := &KajiwotoRPCChatEnterMessage{
+						UserData: userData,
+						ChatroomData: KajiwotoRPCChatRoomData{
+							ChatRoomId:    os.Getenv("WEBSOCKET_CHATROOM_ID"),
+							IsPreviewRoom: false,
+							LastMessages:  []KajiwotoRPCChatMessage{}, // TODO: Not sure if or how the AI is affected if these are omitted.
+						},
+						Secret: createMessageSecret(),
+					}
+					wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
+					errSend := client.SendMessage(wsMessage)
+					assert.Nil(s.T(), errSend)
+
+					// This gives no further feeback from the backend, just finish test after sending it
+					finishTestChannel <- true
+				}
+			//case ChatActivityPetMessage: // <- First Message to be received; after "chat enter"
+			//	equalChatRoom := chatActivityUpdate.ActivityData.Data.ChatRoomId == os.Getenv("WEBSOCKET_CHATROOM_ID")
+			//	assert.True(s.T(), equalChatRoom)
+			//	if !equalChatRoom {
+			//		finishTestChannel <- true
+			//	} else {
+			//		// Evaluate Pet Data
+			//		petNotEmpty := chatActivityUpdate.ActivityData.Data.PetData != nil
+			//		equalOwner := chatActivityUpdate.ActivityData.Data.PetData.OwnerId == userData.UserID
+			//		assert.True(s.T(), petNotEmpty)
+			//		assert.True(s.T(), equalOwner)
+			//		if !petNotEmpty || !equalOwner {
+			//			finishTestChannel <- true
+			//		} else {
+			//			// Send enter Chat Leave
+			//			subscribeMessage := &KajiwotoRPCChatLeaveMessage{
+			//				ChatRoom: KajiwotoRPCChatRoomId{
+			//					ChatRoomId: os.Getenv("WEBSOCKET_CHATROOM_ID"),
+			//				},
+			//				Secret: createMessageSecret(),
+			//			}
+			//			wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
+			//			errSend := client.SendMessage(wsMessage)
+			//			assert.Nil(s.T(), errSend)
+			//
+			//			// This gives no further feeback from the backend, just finish test after sending it
+			//			finishTestChannel <- true
+			//		}
+			//	}
+			default:
+				assert.True(s.T(), false, "unexpected Chat activity message received")
+				finishTestChannel <- true
+			}
 		case <-waitTimeout.C:
 			assert.True(s.T(), false, "timeout reached")
 			// Shutdown
-			closeChannel <- true
-		case <-closeChannel:
-			// Create leave message & send it
-			//subscribeMessage := &KajiwotoRPCChatLeaveMessage{
-			//	ChatRoom: KajiwotoRPCChatRoomId{
-			//		ChatRoomId: "vd8p",
-			//	},
-			//	Secret: client.createSecret(),
-			//}
-			//wsMessage := &KajiwotoWebSocketMessage{
-			//	MessageCode:    SocketCodeMessageEvent,
-			//	MessageContent: subscribeMessage.ToRPCBaseMessage().Serialize(),
-			//}
-			//errSend := client.SendMessage(wsMessage)
-			//assert.Nil(s.T(), errSend)
-			//time.Sleep(time.Millisecond * 500)
-
+			finishTestChannel <- true
+		case <-finishTestChannel:
+			// Remove Handlers & Shutdown the client
+			client.RemoveMessageHandler(chatActivityHandlerKey)
+			client.RemoveMessageHandler(userStatusHandlerKey)
 			client.StopListeningToMessages()
 			done = true
 			break

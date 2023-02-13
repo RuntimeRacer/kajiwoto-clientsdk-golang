@@ -27,7 +27,7 @@ import (
  */
 
 // NewKajiwotoWebSocketAuthResponseHandler is used to handle an auth message response
-func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoClient) MessageHandlerFunc {
+func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoWebSocketClient) MessageHandlerFunc {
 	return func(message *KajiwotoWebSocketMessage) error {
 		if message.MessageCode == SocketCodeMessageConnect {
 			// Try to umarshall into required response
@@ -45,7 +45,7 @@ func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoClient) MessageHandlerFu
 }
 
 // NewKajiwotoWebSocketPingHandler is used to handle a ping event from the backend
-func NewKajiwotoWebSocketPingHandler(c *KajiwotoClient) MessageHandlerFunc {
+func NewKajiwotoWebSocketPingHandler(c *KajiwotoWebSocketClient) MessageHandlerFunc {
 	return func(message *KajiwotoWebSocketMessage) error {
 		if message.MessageCode == SocketCodePing {
 			// Send Ping

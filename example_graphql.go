@@ -30,7 +30,7 @@ func main() {
 	sessionKey := ""
 
 	// Init Client
-	client := graphql.GetKajiwotoClient(constants.KWGraphQLEndpoint)
+	client := graphql.GetKajiwotoGraphQLClient(constants.KWGraphQLEndpoint)
 
 	// Check whether there is a Session key defined
 	loginResult := graphql.LoginResult{}

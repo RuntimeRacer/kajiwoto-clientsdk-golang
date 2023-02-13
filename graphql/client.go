@@ -48,13 +48,13 @@ func (h *headerTransport) AddHeaders(newHeaders map[string]string) {
 	}
 }
 
-// KajiwotoClient is a custom graphql client for kajiwoto reqeusts using the graphql API
-type KajiwotoClient struct {
+// KajiwotoGraphQLClient is a custom graphql client for kajiwoto reqeusts using the graphql API
+type KajiwotoGraphQLClient struct {
 	client          *gql.Client
 	transportClient *http.Client
 }
 
-func GetKajiwotoClient(endpoint string) *KajiwotoClient {
+func GetKajiwotoGraphQLClient(endpoint string) *KajiwotoGraphQLClient {
 	// Init HTTP Client
 	transportClient := &http.Client{
 		Transport: &headerTransport{
@@ -66,22 +66,22 @@ func GetKajiwotoClient(endpoint string) *KajiwotoClient {
 		},
 	}
 
-	return &KajiwotoClient{
+	return &KajiwotoGraphQLClient{
 		client:          gql.NewClient(endpoint, transportClient),
 		transportClient: transportClient,
 	}
 }
 
-func (c *KajiwotoClient) GetHeaders() map[string]string {
+func (c *KajiwotoGraphQLClient) GetHeaders() map[string]string {
 	return c.transportClient.Transport.(*headerTransport).GetHeaders()
 }
 
-func (c *KajiwotoClient) AddHeaders(newHeaders map[string]string) {
+func (c *KajiwotoGraphQLClient) AddHeaders(newHeaders map[string]string) {
 	c.transportClient.Transport.(*headerTransport).AddHeaders(newHeaders)
 }
 
 // DoLoginUserPW performs login via user / pw combination
-func (c *KajiwotoClient) DoLoginUserPW(username, password string) (result LoginResult, err error) {
+func (c *KajiwotoGraphQLClient) DoLoginUserPW(username, password string) (result LoginResult, err error) {
 	// Sanity check
 	if username == "" || password == "" {
 		return result, fmt.Errorf("invalid login credentials")
@@ -107,7 +107,7 @@ func (c *KajiwotoClient) DoLoginUserPW(username, password string) (result LoginR
 }
 
 // DoLoginAuthToken performs login via session key if available
-func (c *KajiwotoClient) DoLoginAuthToken(authToken string) (result LoginResult, err error) {
+func (c *KajiwotoGraphQLClient) DoLoginAuthToken(authToken string) (result LoginResult, err error) {
 	// Sanity check
 	if authToken == "" {
 		return result, fmt.Errorf("invalid login credentials")
@@ -138,7 +138,7 @@ func (c *KajiwotoClient) DoLoginAuthToken(authToken string) (result LoginResult,
 	return result, nil
 }
 
-func (c *KajiwotoClient) GetAITrainerGroup(aiTrainerGroupID, authToken string) (result AITrainerGroup, err error) {
+func (c *KajiwotoGraphQLClient) GetAITrainerGroup(aiTrainerGroupID, authToken string) (result AITrainerGroup, err error) {
 	// Sanity check
 	if authToken == "" {
 		return result, fmt.Errorf("invalid auth token")
@@ -168,7 +168,7 @@ func (c *KajiwotoClient) GetAITrainerGroup(aiTrainerGroupID, authToken string) (
 	return result, nil
 }
 
-func (c *KajiwotoClient) GetDatasetLines(aiTrainerGroupID, searchQuery, authToken string, limit, offset int) (result []DatasetLine, err error) {
+func (c *KajiwotoGraphQLClient) GetDatasetLines(aiTrainerGroupID, searchQuery, authToken string, limit, offset int) (result []DatasetLine, err error) {
 	// Sanity check
 	if authToken == "" {
 		return result, fmt.Errorf("invalid auth token")
@@ -207,7 +207,7 @@ func (c *KajiwotoClient) GetDatasetLines(aiTrainerGroupID, searchQuery, authToke
 	return result, nil
 }
 
-func (c *KajiwotoClient) AddToDataset(aiTrainerGroupID, authToken string, dialogues []*AiDialogueInput) (result AIEditorResult, err error) {
+func (c *KajiwotoGraphQLClient) AddToDataset(aiTrainerGroupID, authToken string, dialogues []*AiDialogueInput) (result AIEditorResult, err error) {
 	// Sanity check
 	if authToken == "" {
 		return result, fmt.Errorf("invalid login credentials")
@@ -236,7 +236,7 @@ func (c *KajiwotoClient) AddToDataset(aiTrainerGroupID, authToken string, dialog
 	return result, nil
 }
 
-func (c *KajiwotoClient) GetRoom(chatRoomID, kajiID, authToken string) (result Room, err error) {
+func (c *KajiwotoGraphQLClient) GetRoom(chatRoomID, kajiID, authToken string) (result Room, err error) {
 	// Sanity check
 	if authToken == "" {
 		return result, fmt.Errorf("invalid auth token")
@@ -267,11 +267,42 @@ func (c *KajiwotoClient) GetRoom(chatRoomID, kajiID, authToken string) (result R
 	return result, nil
 }
 
-func (c *KajiwotoClient) performGraphMutation(vars map[string]interface{}, mutation interface{}) error {
+func (c *KajiwotoGraphQLClient) GetRoomHistory(chatRoomID, kajiID, authToken string) (result RoomHistory, err error) {
+	// Sanity check
+	if authToken == "" {
+		return result, fmt.Errorf("invalid auth token")
+	}
+	if chatRoomID == "" {
+		return result, fmt.Errorf("invalid chat room ID")
+	}
+
+	vars := map[string]interface{}{
+		"chatRoomId": gql.String(chatRoomID),
+		"kajiId":     gql.String(kajiID),
+	}
+
+	// Add Auth-Token header
+	headers := map[string]string{
+		"auth_token": authToken,
+	}
+	c.AddHeaders(headers)
+
+	// Execute Query
+	roomResult := kajiwotoRoomHistoryQuery{}
+	if errLogin := c.performGraphQuery(vars, &roomResult); errLogin != nil {
+		return result, fmt.Errorf("unable to fetch room, response: %q", errLogin)
+	}
+
+	// Build generic Result object
+	result = roomResult.RoomHistory
+	return result, nil
+}
+
+func (c *KajiwotoGraphQLClient) performGraphMutation(vars map[string]interface{}, mutation interface{}) error {
 	return c.client.Mutate(context.Background(), mutation, vars)
 }
 
-func (c *KajiwotoClient) performGraphQuery(vars map[string]interface{}, query interface{}) error {
+func (c *KajiwotoGraphQLClient) performGraphQuery(vars map[string]interface{}, query interface{}) error {
 	return c.client.Query(context.Background(), query, vars)
 }
 
