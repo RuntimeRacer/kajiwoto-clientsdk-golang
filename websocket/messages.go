@@ -34,8 +34,6 @@ func createMessageSecret() KajiwotoRPCSecret {
 	// Build timestamp secret
 	now := time.Now()
 	milis := now.UnixMilli()
-
-	milis = 1675606413185
 	timestamp := strconv.FormatInt(milis, 10)
 
 	// Get chars at pos 7 & 8 + their int representation
