@@ -80,6 +80,9 @@ func (s *WebSocketClientTestSuite) helperChatActivityChannelWithHandler() (chan 
 			rpcMessage := &KaiwotoRPCBaseMessage{}
 			errDeserialize := rpcMessage.Deserialize(message.MessageContent)
 			assert.Nil(s.T(), errDeserialize)
+			if errDeserialize != nil {
+				return errDeserialize
+			}
 
 			// Handle Activity Message
 			if rpcMessage.Action == RPCMessageChatActivity {
@@ -103,6 +106,9 @@ func (s *WebSocketClientTestSuite) helperUserStatusChannelWithHandler() (chan *K
 			rpcMessage := &KaiwotoRPCBaseMessage{}
 			errDeserialize := rpcMessage.Deserialize(message.MessageContent)
 			assert.Nil(s.T(), errDeserialize)
+			if errDeserialize != nil {
+				return errDeserialize
+			}
 
 			// Handle Activity Message
 			if rpcMessage.Action == RPCMessageUserStatus {
