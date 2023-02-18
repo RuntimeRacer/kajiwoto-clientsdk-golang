@@ -163,7 +163,7 @@ func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 		UserStatus: KajiwotoRPCUserStatus{
 			Status: "ONLINE",
 		},
-		Secret: createMessageSecret(),
+		Secret: CreateMessageSecret(),
 	}
 	wsMessage := CreateKajiwotoWebSocketEventMessage(loginMessage)
 	errSend := client.SendMessage(wsMessage)
@@ -190,7 +190,7 @@ func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 					SubscribeArgs: KajiwotoRPCSubscribeArgs{
 						ChatRoomIds: []string{os.Getenv("WEBSOCKET_CHATROOM_ID")},
 					},
-					Secret: createMessageSecret(),
+					Secret: CreateMessageSecret(),
 				}
 				wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
 				errSend := client.SendMessage(wsMessage)
@@ -216,7 +216,7 @@ func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 							IsPreviewRoom: false,
 							LastMessages:  []KajiwotoRPCChatMessage{}, // TODO: Not sure if or how the AI is affected if these are omitted.
 						},
-						Secret: createMessageSecret(),
+						Secret: CreateMessageSecret(),
 					}
 					wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
 					errSend := client.SendMessage(wsMessage)
@@ -244,7 +244,7 @@ func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 			//				ChatRoom: KajiwotoRPCChatRoomId{
 			//					ChatRoomId: os.Getenv("WEBSOCKET_CHATROOM_ID"),
 			//				},
-			//				Secret: createMessageSecret(),
+			//				Secret: CreateMessageSecret(),
 			//			}
 			//			wsMessage := CreateKajiwotoWebSocketEventMessage(subscribeMessage)
 			//			errSend := client.SendMessage(wsMessage)

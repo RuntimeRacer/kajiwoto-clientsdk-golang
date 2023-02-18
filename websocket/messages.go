@@ -30,7 +30,7 @@ func CreateKajiwotoWebSocketEventMessage(rpcMessage KajiwotoRPCMessage) *Kajiwot
 	return wsMessage
 }
 
-func createMessageSecret() KajiwotoRPCSecret {
+func CreateMessageSecret() KajiwotoRPCSecret {
 	// Build timestamp secret
 	now := time.Now()
 	milis := now.UnixMilli()
