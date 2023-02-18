@@ -110,7 +110,8 @@ type KaiwotoWebSocketAuthRequest struct {
 	ApiKey string `json:"api_key"`
 }
 type KaiwotoWebSocketAuthResponse struct {
-	Sid string `json:"sid"`
+	Sid     string `json:"sid,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 // Basic RPC message handling types

@@ -17,7 +17,6 @@ limitations under the License.
 package websocket
 
 import (
-	"encoding/json"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"testing"
@@ -46,9 +45,8 @@ func (s *WebSocketClientTestSuite) TestWebSocketLoginWrongAPIKey() {
 	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", brokenKey)
 	// Connect to Websocket Server
 	errConnect := client.Connect()
-	assert.Nil(s.T(), errConnect)
+	assert.NotNil(s.T(), errConnect)
 	// Check for Socket ID not assigned
-	time.Sleep(time.Second * 2)
 	assert.Empty(s.T(), client.socketID)
 }
 
@@ -58,39 +56,21 @@ func (s *WebSocketClientTestSuite) TestWebSocketLoginCorrectAPIKey() {
 	// Connect to Websocket Server
 	errConnect := client.Connect()
 	assert.Nil(s.T(), errConnect)
-	time.Sleep(time.Second)
+	// Check for Socket ID assigned
 	assert.NotEmpty(s.T(), client.socketID)
 }
 
-func (s *WebSocketClientTestSuite) TestWebSocketStopListening() {
-	// Init client wrong key
-	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
-	// Connect to Websocket Server
-	errConnect := client.Connect()
-	assert.Nil(s.T(), errConnect)
-	// Stop listening before backend sends back auth message
-	client.StopListeningToMessages()
-	time.Sleep(time.Second)
-	assert.Empty(s.T(), client.socketID)
-}
-
-func (s *WebSocketClientTestSuite) helperAuthChannelWithHandler() (chan string, MessageHandlerFunc) {
-	authChannel := make(chan string, 1)
-	handleFunc := func(message *KajiwotoWebSocketMessage) error {
-		if message.MessageCode == SocketCodeMessageConnect {
-			// Try to umarshall into required response
-			// If this won't work, message is not of expected type
-			response := &KaiwotoWebSocketAuthResponse{}
-			if errUnmarshall := json.Unmarshal(message.MessageContent.([]byte), response); errUnmarshall != nil {
-				return errUnmarshall
-			}
-			authChannel <- response.Sid
-			return nil
-		}
-		return ErrUnableToHandleMessage
-	}
-	return authChannel, handleFunc
-}
+//func (s *WebSocketClientTestSuite) TestWebSocketStopListening() {
+//	// Init client wrong key
+//	client := GetKajiwotoWebSocketClient("wss://socket.chiefhappiness.co/socket.io/?EIO=4&transport=websocket", os.Getenv("WEBSOCKET_CLIENT_KEY"))
+//	// Connect to Websocket Server
+//	errConnect := client.Connect()
+//	assert.Nil(s.T(), errConnect)
+//	// Stop listening before backend sends back auth message
+//	client.StopListeningToMessages()
+//	//time.Sleep(time.Second)
+//	assert.Empty(s.T(), client.socketID)
+//}
 
 func (s *WebSocketClientTestSuite) helperChatActivityChannelWithHandler() (chan *KajiwotoRPCChatActivityMessage, MessageHandlerFunc) {
 	chatActivityChannel := make(chan *KajiwotoRPCChatActivityMessage, 1)
@@ -158,18 +138,17 @@ func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 
 	// Define channels used to wait for responses
 	finishTestChannel := make(chan bool, 1)
-	authChannel, authHandler := s.helperAuthChannelWithHandler()
 	chatActivityChannel, chatActivityHandler := s.helperChatActivityChannelWithHandler()
 	userStatusChannel, userStatusHandler := s.helperUserStatusChannelWithHandler()
 
 	// Add Handlers
-	_ = client.AddMessageHandler(authHandler, true)
 	chatActivityHandlerKey := client.AddMessageHandler(chatActivityHandler, false)
 	userStatusHandlerKey := client.AddMessageHandler(userStatusHandler, false)
 
 	// Connect to Websocket Server
 	errConnect := client.Connect()
 	assert.Nil(s.T(), errConnect)
+	assert.NotNil(s.T(), client.socketID)
 
 	// Build comman data required for handling
 	userData := s.helperBuildDefaultRequestData(client)
@@ -178,24 +157,21 @@ func (s *WebSocketClientTestSuite) TestWebSocketKajiRoomFlow() {
 	waitTimeout := time.NewTimer(time.Second * 5)
 	done := false
 
+	// Create Login message & send it
+	loginMessage := &KajiwotoRPCLoginMessage{
+		UserData: userData,
+		UserStatus: KajiwotoRPCUserStatus{
+			Status: "ONLINE",
+		},
+		Secret: createMessageSecret(),
+	}
+	wsMessage := CreateKajiwotoWebSocketEventMessage(loginMessage)
+	errSend := client.SendMessage(wsMessage)
+	assert.Nil(s.T(), errSend)
+
 	// Handle all events
 	for !done {
 		select {
-		case socketId := <-authChannel:
-			assert.NotEmpty(s.T(), socketId)
-
-			// Create Login message & send it
-			loginMessage := &KajiwotoRPCLoginMessage{
-				UserData: userData,
-				UserStatus: KajiwotoRPCUserStatus{
-					Status: "ONLINE",
-				},
-				Secret: createMessageSecret(),
-			}
-			wsMessage := CreateKajiwotoWebSocketEventMessage(loginMessage)
-			errSend := client.SendMessage(wsMessage)
-			assert.Nil(s.T(), errSend)
-
 		case userStatusUpdate := <-userStatusChannel:
 			assert.NotNil(s.T(), userStatusUpdate)
 

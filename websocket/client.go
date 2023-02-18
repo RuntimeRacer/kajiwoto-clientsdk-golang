@@ -78,7 +78,7 @@ func (c *KajiwotoWebSocketClient) Connect() error {
 	// Update conn reference
 	c.wsConn = conn
 
-	// Get Welcome message - TODO: Replace with Handler
+	// Get Welcome message for initial handshake
 	msgType, data, errWelcome := c.wsConn.Read(context.Background())
 	if errWelcome != nil {
 		return errWelcome
@@ -91,9 +91,12 @@ func (c *KajiwotoWebSocketClient) Connect() error {
 
 	// Add Default Handlers
 	c.AddDefaultHandlers()
-
 	// Set WS Connection to listen for incoming messages
 	c.StartListeningToMessages()
+
+	// Add Auth Response Handler and wit for Auth to be confirmed
+	authChannel := make(chan *KaiwotoWebSocketAuthResponse, 1)
+	c.AddMessageHandler(NewKajiwotoWebSocketAuthResponseHandler(c, authChannel), true)
 
 	// Send API Key to authenticate against the Kajiwoto websocket backend
 	authMessage := &KajiwotoWebSocketMessage{
@@ -105,7 +108,32 @@ func (c *KajiwotoWebSocketClient) Connect() error {
 	if errAuth := c.SendMessage(authMessage); errAuth != nil {
 		return errAuth
 	}
-	return nil
+
+	// Wait for Auth channel to return socket ID as confirmation of successful login, or timeout is hit
+	connectTimeout := time.NewTimer(time.Second * 5)
+	for {
+		select {
+		case authResponse := <-authChannel:
+			// Check if Socket ID was set
+			if len(authResponse.Sid) > 0 {
+				c.socketID = authResponse.Sid
+				log.Debugf("Assigned Socket ID: %v", c.socketID)
+				return nil
+			}
+			// In any other case, error
+			c.StopListeningToMessages()
+			c.RemoveAllMessageHandlers()
+			return fmt.Errorf("server returned invalid auth message result: %+v", authResponse)
+		case <-connectTimeout.C:
+			c.StopListeningToMessages()
+			c.RemoveAllMessageHandlers()
+			return errors.New("connection timeout")
+		}
+	}
+}
+
+func (c *KajiwotoWebSocketClient) IsConnected() bool {
+	return c.wsConn != nil && len(c.socketID) > 0
 }
 
 // AddDefaultHandlers
@@ -113,8 +141,6 @@ func (c *KajiwotoWebSocketClient) Connect() error {
 func (c *KajiwotoWebSocketClient) AddDefaultHandlers() {
 	// Ping Handler
 	c.AddMessageHandler(NewKajiwotoWebSocketPingHandler(c), false)
-	// Auth Response handler - Updates Socket ID
-	c.AddMessageHandler(NewKajiwotoWebSocketAuthResponseHandler(c), false)
 }
 
 func (c *KajiwotoWebSocketClient) StartListeningToMessages() {
@@ -174,6 +200,12 @@ func (c *KajiwotoWebSocketClient) RemoveMessageHandler(handlerKey string) {
 	delete(c.handlers, handlerKey)
 	c.handlerMtx.Unlock()
 	log.Debugf("Removed Message Handler '%v'", handlerKey)
+}
+
+func (c *KajiwotoWebSocketClient) RemoveAllMessageHandlers() {
+	c.handlerMtx.Lock()
+	c.handlers = make(map[string]*MessageHandler)
+	c.handlerMtx.Unlock()
 }
 
 func (c *KajiwotoWebSocketClient) SendMessage(message *KajiwotoWebSocketMessage) error {

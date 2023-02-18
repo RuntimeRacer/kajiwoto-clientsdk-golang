@@ -18,7 +18,6 @@ package websocket
 
 import (
 	"encoding/json"
-	log "github.com/sirupsen/logrus"
 )
 
 /*
@@ -27,7 +26,7 @@ import (
  */
 
 // NewKajiwotoWebSocketAuthResponseHandler is used to handle an auth message response
-func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoWebSocketClient) MessageHandlerFunc {
+func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoWebSocketClient, responseChannel chan *KaiwotoWebSocketAuthResponse) MessageHandlerFunc {
 	return func(message *KajiwotoWebSocketMessage) error {
 		if message.MessageCode == SocketCodeMessageConnect {
 			// Try to umarshall into required response
@@ -36,8 +35,16 @@ func NewKajiwotoWebSocketAuthResponseHandler(c *KajiwotoWebSocketClient) Message
 			if errUnmarshall := json.Unmarshal(message.MessageContent.([]byte), response); errUnmarshall != nil {
 				return errUnmarshall
 			}
-			c.socketID = response.Sid
-			log.Debugf("Assigned Socket ID: %v", c.socketID)
+			responseChannel <- response
+			return nil
+		} else if message.MessageCode == SocketCodeMessageError {
+			// Try to umarshall into required response
+			// If this won't work, message is not of expected type
+			response := &KaiwotoWebSocketAuthResponse{}
+			if errUnmarshall := json.Unmarshal(message.MessageContent.([]byte), response); errUnmarshall != nil {
+				return errUnmarshall
+			}
+			responseChannel <- response
 			return nil
 		}
 		return ErrUnableToHandleMessage
